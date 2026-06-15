@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Bag | Madamcutie</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .cart-container { max-width: 800px; margin: 40px auto; padding: 20px; }
+        .cart-item { display: flex; align-items: center; border-bottom: 1px solid #eee; padding: 15px 0; gap: 15px; }
+        .cart-item img { width: 80px; height: 100px; object-fit: cover; border-radius: 4px; }
+        .cart-item-details { flex-grow: 1; }
+        .cart-item-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; }
+        .cart-item-price { color: #d4af37; font-weight: bold; }
+        .cart-remove { color: #ff007f; cursor: pointer; font-size: 0.9rem; text-decoration: underline; margin-top: 5px; display: inline-block; }
+        .cart-summary { margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 8px; text-align: right; }
+        .cart-total { font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; }
+        .buy-now-btn { background: #ff007f; color: white; border: none; padding: 12px 30px; font-size: 1.1rem; font-weight: bold; border-radius: 25px; cursor: pointer; text-transform: uppercase; transition: opacity 0.3s; text-decoration: none; display: inline-block; }
+        .buy-now-btn:hover { opacity: 0.8; }
+        .empty-cart { text-align: center; padding: 50px 20px; }
+        .empty-cart p { margin-bottom: 20px; color: #666; }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container nav-container" style="position: relative;">
+            <div class="logo-wrapper" style="position: absolute; left: 50%; transform: translateX(-50%);">
+                <a href="index.html" class="logo-text" style="background: linear-gradient(45deg, #d4af37, #f3e5ab, #b8860b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0px 2px 4px rgba(0,0,0,0.1); font-weight: 800; font-family: var(--font-heading); font-size: 2.2rem; letter-spacing: 2px;">Madamcutie</a>
+            </div>
+            
+            <nav class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="shop.html">Shop</a>
+                <a href="about.html">Our Story</a>
+            </nav>
+
+            <div class="header-actions">
+                <a href="cart.html" class="action-btn active" title="Shopping Bag">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                    <span class="cart-count">0</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="cart-container">
+        <h1 style="font-family: var(--font-heading); margin-bottom: 20px;">Your Bag</h1>
+        
+        <div id="cart-items">
+            <!-- Items will be loaded here -->
+        </div>
+        
+        <div class="cart-summary" id="cart-summary" style="display: none;">
+            <div class="cart-total">Total: ₹<span id="total-price">0</span></div>
+            <a href="#" id="buy-now-btn" class="buy-now-btn">Buy Now</a>
+        </div>
+        
+        <div class="empty-cart" id="empty-cart" style="display: none;">
+            <p>Your bag is currently empty.</p>
+            <a href="shop.html" class="btn btn-primary">Continue Shopping</a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            let cart = JSON.parse(localStorage.getItem('madamCart')) || [];
+            const cartItemsContainer = document.getElementById('cart-items');
+            const cartSummary = document.getElementById('cart-summary');
+            const emptyCart = document.getElementById('empty-cart');
+            const totalPriceEl = document.getElementById('total-price');
+            const buyNowBtn = document.getElementById('buy-now-btn');
+            const cartCountEl = document.querySelector('.cart-count');
+            
+            function renderCart() {
+                if(cartCountEl) cartCountEl.textContent = cart.length;
+                
+                if (cart.length === 0) {
+                    cartItemsContainer.innerHTML = '';
+                    cartSummary.style.display = 'none';
+                    emptyCart.style.display = 'block';
+                    return;
+                }
+                
+                emptyCart.style.display = 'none';
+                cartSummary.style.display = 'block';
+                
+                let html = '';
+                let total = 0;
+                
+                cart.forEach((item, index) => {
+                    total += item.price;
+                    html += `
+                        <div class="cart-item">
+                            <img src="${item.img || '/assets/images/placeholder.jpg'}" alt="${item.title}">
+                            <div class="cart-item-details">
+                                <div class="cart-item-title">${item.title}</div>
+                                <div class="cart-item-price">₹${item.price}</div>
+                                <div class="cart-remove" data-index="${index}">Remove</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                cartItemsContainer.innerHTML = html;
+                totalPriceEl.textContent = total;
+                
+                // Add remove listeners
+                document.querySelectorAll('.cart-remove').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const index = parseInt(e.target.getAttribute('data-index'));
+                        cart.splice(index, 1);
+                        localStorage.setItem('madamCart', JSON.stringify(cart));
+                        renderCart();
+                    });
+                });
+                
+                // WhatsApp URL
+                let waText = "Hello, I would like to order the following items from Madamcutie:\\n\\n";
+                cart.forEach((item, idx) => {
+                    waText += `${idx+1}. ${item.title} - ₹${item.price}\\n`;
+                });
+                waText += `\\nTotal: ₹${total}`;
+                
+                const waUrl = `https://wa.me/919911852113?text=${encodeURIComponent(waText)}`;
+                buyNowBtn.href = waUrl;
+            }
+            
+            renderCart();
+        });
+    </script>
+</body>
+</html>

@@ -1461,7 +1461,8 @@
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Publishing...';
             
             try {
-                const response = await fetch('/api/save-content', {
+                // 1. Save to js/products.json
+                const responseJson = await fetch('/api/save-content', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1470,11 +1471,26 @@
                     })
                 });
                 
-                const data = await response.json();
-                if (data.success === true || data.status === 'success') {
+                const dataJson = await responseJson.json();
+                if (!(dataJson.success === true || dataJson.status === 'success')) {
+                    throw new Error(dataJson.error || 'Failed to save products.json');
+                }
+                
+                // 2. Save to js/products.js
+                const responseJs = await fetch('/api/save-content', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filePath: 'js/products.js',
+                        content: 'const PRODUCTS = ' + JSON.stringify(products, null, 4) + ';'
+                    })
+                });
+                
+                const dataJs = await responseJs.json();
+                if (dataJs.success === true || dataJs.status === 'success') {
                     alert('Products updated! Site will refresh in 60 seconds.');
                 } else {
-                    alert('Error: ' + (data.error || 'Unknown error occurred.'));
+                    alert('Error: ' + (dataJs.error || 'Failed to save products.js'));
                 }
             } catch (err) {
                 alert('Error: ' + err.message);

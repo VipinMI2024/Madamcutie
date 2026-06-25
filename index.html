@@ -798,11 +798,11 @@ function saveChanges() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filePath: filename, content: currentHtml })
     }).then(res => res.json()).then(data => {
-        if(data.status === 'success') {
+        if(data.success === true) {
             alert('Changes saved successfully!');
             location.reload();
         } else {
-            alert('Error saving changes: ' + (data.message || 'Unknown error'));
+            alert('Error saving changes: ' + (data.error || 'Unknown error'));
             location.reload();
         }
     }).catch(err => {

@@ -1,5 +1,3 @@
-const https = require('https');
-
 module.exports = async function(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -12,16 +10,29 @@ module.exports = async function(req, res) {
 
   try {
     const getRes = await fetch(
-      `https://api.github.com/repos/${process.env.GITHUB_REPO}/contents/${filePath}`,
+      `https://api.github.com/repos/${process.env.GITHUB_REPO}/contents/${filePath}?t=${Date.now()}`,
       { 
+        cache: 'no-store',
         headers: { 
           Authorization: `Bearer ${process.env.GITHUB_TOKEN}`, 
-          'User-Agent': 'madamcutie-admin' 
+          'User-Agent': 'madamcutie-admin',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         } 
       }
     );
-    const fileData = await getRes.json();
     
+    console.log(`[save-content] GET metadata for ${filePath} status: ${getRes.status}`);
+    
+    if (!getRes.ok && getRes.status !== 404) {
+      const errText = await getRes.text();
+      console.error(`[save-content] GET metadata failed:`, errText);
+      return res.status(getRes.status).json({ success: false, error: `Failed to fetch file metadata: ${errText}` });
+    }
+    
+    const fileData = getRes.ok ? await getRes.json() : {};
+    console.log(`[save-content] File SHA: ${fileData.sha}`);
+
     const updateRes = await fetch(
       `https://api.github.com/repos/${process.env.GITHUB_REPO}/contents/${filePath}`,
       {
@@ -39,13 +50,16 @@ module.exports = async function(req, res) {
       }
     );
 
-    if (updateRes.ok) {
+    const updateBody = await updateRes.json();
+    console.log(`[save-content] PUT update status: ${updateRes.status}`, JSON.stringify(updateBody));
+
+    if (updateRes.status === 200 || updateRes.status === 201) {
       res.json({ success: true });
     } else {
-      const err = await updateRes.json();
-      res.status(500).json({ success: false, error: err });
+      res.status(updateRes.status || 500).json({ success: false, error: updateBody });
     }
   } catch (e) {
+    console.error(`[save-content] Error handling save:`, e);
     res.status(500).json({ success: false, error: e.message });
   }
 }

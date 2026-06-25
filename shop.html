@@ -1386,9 +1386,8 @@
             count.textContent = list.length;
             grid.innerHTML = list.map(p => {
                 const isWishlisted = wishlist.includes(p.id);
-                // Use next image as hover effect
-                const nextIdx = (PRODUCTS.indexOf(PRODUCTS.find(x => x.id === p.id)) + 1) % PRODUCTS.length;
-                const hoverImage = PRODUCTS[nextIdx].image;
+                // Use same image for hover effect
+                const hoverImage = p.image;
 
                 return `
                 <div class="product-card">

@@ -589,9 +589,7 @@
 
             container.innerHTML = featuredList.map(p => {
                 // Alternate image if there are multiple, or use standard
-                // We have 36 images. We can use the next image index as the hover image!
-                const nextProduct = PRODUCTS[(PRODUCTS.indexOf(p) + 1) % PRODUCTS.length];
-                const altImage = nextProduct.image;
+                const altImage = p.image;
                 
                 return `
                     <div class="product-card" id="card-${p.id}">

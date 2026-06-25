@@ -430,17 +430,5 @@ const PRODUCTS = [
         "image": "/assets/images/madam/saini-36.jpg",
         "in_stock": true,
         "featured": false
-    },
-    {
-        "id": "p37",
-        "name": "car",
-        "category": "Dresses",
-        "price": 445,
-        "rating": 5,
-        "reviews": 0,
-        "description": "sdf",
-        "image": "/assets/images/madam/2026-Maserati-MCPura-Cielo-Tributo-1926-004-1080.jpg",
-        "in_stock": true,
-        "featured": true
     }
 ];

@@ -1025,6 +1025,7 @@
         const productsPerPage = 10;
         let currentEditingPage = '';
         let currentEditingFilePath = '';
+        let currentProductId = '';
 
         // Password protection check
         function checkPassword() {
@@ -1262,30 +1263,32 @@
         // Edit Product Page in Preview Iframe
         function editProductPage(productId) {
             const iframe = document.getElementById('page-preview-iframe');
-            
-            // Scroll to Page Content Editor
-            const editorSection = document.querySelector('.page-content-editor') || document.getElementById('page-content-editor-section');
+            const editorSection = document.querySelector('.page-content-editor-section') || document.getElementById('page-content-editor-section') || document.querySelector('.content-editor-wrap');
             if (editorSection) editorSection.scrollIntoView({ behavior: 'smooth' });
 
             currentEditingPage = `product.html?id=${productId}`;
             currentEditingFilePath = 'product.html';
+            currentProductId = productId;
             const pageSelect = document.getElementById('page-select-dropdown');
             if (pageSelect) pageSelect.value = 'product.html';
-            
-            iframe.src = `/product.html?id=${productId}`;
-            
+
+            // Set iframe src with product id - let it fully load
+            iframe.src = '/product.html?id=' + productId;
+
             iframe.onload = function() {
                 const doc = iframe.contentDocument || iframe.contentWindow.document;
                 
-                // Wait for dynamic content to render
+                // Wait for product content to render dynamically
                 let attempts = 0;
-                const waitForContent = setInterval(() => {
+                const waitForProduct = setInterval(() => {
                     attempts++;
-                    const title = doc.querySelector('h1, .product-name, .product-title, [class*="product-title"]');
-                    if (title || attempts > 10) {
-                        clearInterval(waitForContent);
+                    const title = doc.querySelector('h1') || doc.querySelector('[class*="product-name"]') || doc.querySelector('[class*="product-title"]');
+                    const hasContent = title && title.textContent.trim().length > 0;
+                    
+                    if (hasContent || attempts > 15) {
+                        clearInterval(waitForProduct);
+                        console.log('Product content found after', attempts, 'attempts');
                         makePageEditable(doc);
-                        // Show edit mode banner
                         injectEditBanner(doc);
                         
                         const saveBtn = document.getElementById('save-page-btn');
@@ -1294,7 +1297,7 @@
                             saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Page';
                         }
                     }
-                }, 300);
+                }, 400);
             };
         }
 
@@ -1886,80 +1889,107 @@
         }
 
         async function savePageContent() {
-            const btn = document.getElementById('save-page-btn');
-            if (btn.disabled) return;
+            const iframe = document.getElementById('page-preview-iframe');
+            if (!iframe || !currentEditingFilePath) {
+                alert('No page loaded for editing.');
+                return;
+            }
 
-            const page = currentEditingFilePath || document.getElementById('page-select-dropdown').value;
-            if (!page) return;
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
             
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+            // Extract edited product details if this was a product page
+            if (currentProductId && currentEditingFilePath === 'product.html') {
+                const editedName = doc.getElementById('product-name') ? doc.getElementById('product-name').textContent.trim() : '';
+                const editedDesc = doc.getElementById('product-description') ? doc.getElementById('product-description').textContent.trim() : '';
+                const editedPriceText = doc.getElementById('product-price') ? doc.getElementById('product-price').textContent.replace(/[^\d.]/g, '') : '';
+                
+                const p = products.find(prod => prod.id === currentProductId);
+                if (p) {
+                    let updated = false;
+                    if (editedName && editedName !== 'Product Name' && editedName !== p.name) {
+                        p.name = editedName;
+                        updated = true;
+                    }
+                    if (editedDesc && !editedDesc.startsWith('This exquisite piece') && editedDesc !== p.description) {
+                        p.description = editedDesc;
+                        updated = true;
+                    }
+                    if (editedPriceText) {
+                        const priceNum = parseFloat(editedPriceText);
+                        if (!isNaN(priceNum) && priceNum > 0 && priceNum !== p.price) {
+                            p.price = priceNum;
+                            updated = true;
+                        }
+                    }
+                    if (updated) {
+                        console.log('Detected edits on product page details. Syncing to database...');
+                        try {
+                            await saveAndPublish(true);
+                            renderProducts();
+                        } catch (publishErr) {
+                            console.error('Failed to auto-sync product changes:', publishErr);
+                        }
+                    }
+                }
+            }
+
+            const clone = doc.documentElement.cloneNode(true);
+
+            // Remove editor artifacts
+            const editorStyles = clone.querySelector('#admin-editor-styles');
+            if (editorStyles) editorStyles.remove();
             
+            const editBanner = clone.querySelector('#admin-edit-banner');
+            if (editBanner) editBanner.remove();
+
+            // Reset body padding-top inside clone
+            if (clone.body) {
+                clone.body.style.paddingTop = '';
+                if (clone.body.getAttribute('style') === '') clone.body.removeAttribute('style');
+            }
+
+            // Remove contenteditable and highlight class from all elements
+            clone.querySelectorAll('[contenteditable]').forEach(el => {
+                el.removeAttribute('contenteditable');
+                el.classList.remove('admin-editable-highlight');
+            });
+
+            // Clear shop grid (dynamic content)
+            const shopGrid = clone.querySelector('#shop-grid');
+            if (shopGrid) shopGrid.innerHTML = '<!-- Products will be injected here -->';
+
+            const featuredGrid = clone.querySelector('#featured-products-container');
+            if (featuredGrid) featuredGrid.innerHTML = '<!-- Featured products will be injected here -->';
+
+            const htmlContent = '<!DOCTYPE html>\n' + clone.outerHTML;
+
+            const saveBtn = document.querySelector('.save-page-btn') || document.getElementById('save-page-btn');
+            if (saveBtn) { saveBtn.textContent = 'Saving...'; saveBtn.disabled = true; }
+
             try {
-                const iframe = document.getElementById('page-preview-iframe');
-                const doc = iframe.contentDocument || iframe.contentWindow.document;
-                
-                // Clone root node to purge editor artifacts before saving HTML
-                const clone = doc.documentElement.cloneNode(true);
-                
-                // Purge custom stylesheet
-                const styleEl = clone.querySelector('#admin-editor-styles');
-                if (styleEl) styleEl.remove();
-                
-                // Purge edit mode banner
-                const bannerEl = clone.querySelector('#admin-edit-banner') || clone.querySelector('#admin-edit-mode-banner');
-                if (bannerEl) bannerEl.remove();
-                
-                // Reset body padding-top inside clone
-                if (clone.body) {
-                    clone.body.style.paddingTop = '';
-                    if (clone.body.getAttribute('style') === '') clone.body.removeAttribute('style');
-                }
-                
-                // Purge overlay buttons
-                clone.querySelectorAll('.admin-product-edit-overlay-btn').forEach(btn => btn.remove());
-                
-                // Purge active highlights and contenteditable attributes
-                clone.querySelectorAll('.admin-editable-highlight').forEach(el => {
-                    el.removeAttribute('contenteditable');
-                    el.classList.remove('admin-editable-highlight');
-                    if (el.className === '') el.removeAttribute('class');
-                });
-
-                // Clear dynamically loaded products in saved file to keep templates clean
-                const shopGrid = clone.querySelector('#shop-grid');
-                if (shopGrid) {
-                    shopGrid.innerHTML = '\n                    <!-- Products will be injected here -->\n                ';
-                }
-                const featuredContainer = clone.querySelector('#featured-products-container');
-                if (featuredContainer) {
-                    featuredContainer.innerHTML = '\n                    <!-- Products will be injected here -->\n                ';
-                }
-                
-                const outputHtml = '<!DOCTYPE html>\n' + clone.outerHTML;
-                
-                const response = await fetch('/api/save-content', {
+                const res = await fetch('/api/save-content', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        filePath: page,
-                        content: outputHtml
+                        filePath: currentEditingFilePath,
+                        content: htmlContent
                     })
                 });
+
+                const data = await res.json();
                 
-                const data = await response.json();
-                if (data.success === true || data.status === 'success') {
+                if (data.success) {
+                    alert('✅ Page saved and published successfully!');
                     hasUnsavedChanges = false;
-                    alert('Page saved! Local changes are immediate, live site will update in 60 seconds.');
                 } else {
-                    alert('Error: ' + (data.error || 'Unknown error occurred.'));
+                    console.error('Save failed:', data);
+                    alert('❌ Save failed: ' + JSON.stringify(data.error));
                 }
             } catch (err) {
-                alert('Error: ' + err.message);
+                console.error('Save error:', err);
+                alert('❌ Error saving page: ' + err.message);
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+                if (saveBtn) { saveBtn.textContent = 'Save Page'; saveBtn.disabled = false; }
             }
         }
     </script>

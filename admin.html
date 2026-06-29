@@ -1727,42 +1727,33 @@
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
             
-            try {
-                let fetchUrl = '/' + page;
-                currentEditingPage = page;
-                currentEditingFilePath = page;
-                
-                if (page === 'product.html') {
-                    const defaultId = (products && products.length > 0) ? products[0].id : 'p1';
-                    fetchUrl = `/product.html?id=${defaultId}`;
-                    currentEditingPage = `product.html?id=${defaultId}`;
-                    currentEditingFilePath = `product.html`;
-                }
-                const res = await fetch(fetchUrl);
-                if (!res.ok) throw new Error('Could not load page ' + page);
-                const htmlContent = await res.text();
-                
-                const doc = iframe.contentDocument || iframe.contentWindow.document;
-                doc.open();
-                doc.write(htmlContent);
-                doc.close();
-                
-                // Helper to initialize editability
-                const initEditor = () => {
-                    makePageEditable(doc);
+            let fetchUrl = '/' + page;
+            currentEditingPage = page;
+            currentEditingFilePath = page;
+            
+            if (page === 'product.html') {
+                const defaultId = (products && products.length > 0) ? products[0].id : 'p1';
+                fetchUrl = `/product.html?id=${defaultId}`;
+                currentEditingPage = `product.html?id=${defaultId}`;
+                currentEditingFilePath = `product.html`;
+            }
+            
+            iframe.src = fetchUrl;
+            
+            iframe.onload = function() {
+                try {
+                    const doc = iframe.contentDocument || iframe.contentWindow.document;
+                    setTimeout(() => {
+                        makePageEditable(doc);
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Page';
+                    }, 800);
+                } catch (e) {
+                    console.error('Error in iframe onload:', e);
                     saveBtn.disabled = false;
                     saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Page';
-                };
-                
-                iframe.onload = initEditor;
-                // Executing immediately just in case load event already fired
-                setTimeout(initEditor, 200);
-                
-            } catch (err) {
-                alert('Error loading page: ' + err.message);
-                saveBtn.disabled = true;
-                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Page';
-            }
+                }
+            };
         }
 
         function makePageEditable(doc) {
@@ -1792,6 +1783,91 @@
                 }
             `;
             doc.head.appendChild(style);
+            
+            // Inject edit mode banner at the top of the body
+            const oldBanner = doc.getElementById('admin-edit-mode-banner');
+            if (oldBanner) oldBanner.remove();
+            
+            const banner = doc.createElement('div');
+            banner.id = 'admin-edit-mode-banner';
+            banner.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> EDIT MODE - Click yellow elements to edit';
+            banner.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                background: #c9a84c;
+                color: #000;
+                text-align: center;
+                padding: 10px;
+                font-family: 'Plus Jakarta Sans', sans-serif;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 1px;
+                text-transform: uppercase;
+                z-index: 999999;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            `;
+            doc.body.style.paddingTop = '40px'; // Shift body down so content isn't hidden behind banner
+            doc.body.prepend(banner);
+            
+            // Add "Edit Product" overlay buttons to each product card inside #shop-grid
+            doc.querySelectorAll('#shop-grid .product-card').forEach(card => {
+                if (card.querySelector('.admin-product-edit-overlay-btn')) return;
+
+                let productId = '';
+                const addCartBtn = card.querySelector('.btn-add-cart');
+                if (addCartBtn && addCartBtn.id) {
+                    productId = addCartBtn.id.replace('btn-add-', '');
+                } else {
+                    const wishlistBtn = card.querySelector('.wishlist-btn');
+                    if (wishlistBtn) {
+                        const onclickText = wishlistBtn.getAttribute('onclick') || '';
+                        const match = onclickText.match(/toggleWishlist\('([^']+)'/);
+                        if (match) productId = match[1];
+                    }
+                }
+
+                if (!productId) return;
+
+                const imgWrapper = card.querySelector('.product-image-wrapper');
+                if (imgWrapper) {
+                    imgWrapper.style.position = 'relative';
+                    const editBtn = doc.createElement('button');
+                    editBtn.className = 'admin-product-edit-overlay-btn';
+                    editBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Edit Product';
+                    editBtn.style.cssText = `
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        background: #c9a84c;
+                        color: #000;
+                        border: none;
+                        padding: 8px 16px;
+                        border-radius: 4px;
+                        font-size: 11px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        cursor: pointer;
+                        z-index: 100;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+                        display: none;
+                        transition: all 0.3s;
+                    `;
+                    imgWrapper.appendChild(editBtn);
+
+                    imgWrapper.addEventListener('mouseenter', () => { editBtn.style.display = 'block'; });
+                    imgWrapper.addEventListener('mouseleave', () => { editBtn.style.display = 'none'; });
+
+                    editBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.parent.editProductPage(productId);
+                    });
+                }
+            });
             
             // Select and apply editability to target text tags
             const tags = ['h1', 'h2', 'h3', 'p', 'span'];
@@ -1856,6 +1932,19 @@
                 const styleEl = clone.querySelector('#admin-editor-styles');
                 if (styleEl) styleEl.remove();
                 
+                // Purge edit mode banner
+                const bannerEl = clone.querySelector('#admin-edit-mode-banner');
+                if (bannerEl) bannerEl.remove();
+                
+                // Reset body padding-top inside clone
+                if (clone.body) {
+                    clone.body.style.paddingTop = '';
+                    if (clone.body.getAttribute('style') === '') clone.body.removeAttribute('style');
+                }
+                
+                // Purge overlay buttons
+                clone.querySelectorAll('.admin-product-edit-overlay-btn').forEach(btn => btn.remove());
+                
                 // Purge active highlights and contenteditable attributes
                 clone.querySelectorAll('.admin-editable-highlight').forEach(el => {
                     el.removeAttribute('contenteditable');
@@ -1873,24 +1962,10 @@
                     featuredContainer.innerHTML = '\n                    <!-- Products will be injected here -->\n                ';
                 }
                 
-                if (page === 'product.html') {
-                    const pName = clone.querySelector('#product-name');
-                    if (pName) pName.textContent = 'Product Name';
-                    
-                    const pPrice = clone.querySelector('#product-price');
-                    if (pPrice) pPrice.textContent = '₹0';
-                    
-                    const pDesc = clone.querySelector('#product-description');
-                    if (pDesc) pDesc.textContent = 'Product details description will be loaded here.';
-                    
-                    const pBrand = clone.querySelector('#product-brand');
-                    if (pBrand) pBrand.textContent = 'Madamcutie Luxury';
-                    
-                    const pCat = clone.querySelector('#product-category');
-                    if (pCat) pCat.textContent = 'Collections';
-                    
-                    const pImg = clone.querySelector('#main-image');
-                    if (pImg) pImg.src = '';
+                // Clear dynamic product details content to clean comment before saving
+                const detailsContent = clone.querySelector('.product-details-content');
+                if (detailsContent) {
+                    detailsContent.innerHTML = '\n                    <!-- Product details injected here -->\n                ';
                 }
                 
                 const outputHtml = '<!DOCTYPE html>\n' + clone.outerHTML;

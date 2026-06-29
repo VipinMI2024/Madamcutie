@@ -3,7 +3,7 @@ const PRODUCTS = [
         "id": "p1",
         "name": "Elegant Floral Dress",
         "category": "Dresses",
-        "price": 1440,
+        "price": 140,
         "rating": 4,
         "reviews": 12,
         "description": "A stunning elegant floral dress designed for special occasions, featuring premium light breathable fabric, detailed neckline, and a flattering",

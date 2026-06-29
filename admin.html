@@ -852,7 +852,7 @@
                                             <th style="width: 140px;">Category</th>
                                             <th style="width: 110px;">Price</th>
                                             <th style="width: 90px;" class="text-center">Featured</th>
-                                            <th style="width: 70px;" class="text-center">Actions</th>
+                                            <th style="width: 150px;" class="text-center">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="products-tbody">
@@ -870,7 +870,7 @@
                         </div>
 
                         <!-- Page Content Editor Card -->
-                        <div class="card" style="margin-top: 30px;">
+                        <div class="card" id="page-content-editor-section" style="margin-top: 30px;">
                             <div class="card-header-flex">
                                 <h2 class="card-title">Page Content Editor</h2>
                                 <div style="display: flex; gap: 10px; align-items: center;">
@@ -1160,8 +1160,9 @@
                             <span class="slider"></span>
                         </label>
                     </td>
-                    <td class="no-row-click text-center">
-                        <button class="action-btn delete-btn" onclick="deleteProduct('${p.id}')" title="Delete Product">
+                    <td class="no-row-click text-center" style="display: flex; gap: 5px; justify-content: center; align-items: center; min-height: 50px;">
+                        <button onclick="editProductPage('${p.id}')" style="background: #c9a84c; color: #000; border: none; padding: 6px 12px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600;">Edit Page</button>
+                        <button class="action-btn delete-btn" onclick="deleteProduct('${p.id}')" title="Delete Product" style="margin: 0;">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
                     </td>
@@ -1254,6 +1255,58 @@
                     hasUnsavedChanges = true;
                 }
             }
+        }
+
+        // Edit Product Page in Preview Iframe
+        function editProductPage(productId) {
+            const pageEditor = document.getElementById('page-content-editor-section');
+            const iframe = document.getElementById('page-editor-iframe');
+            const pageSelect = document.getElementById('page-select');
+            
+            if (pageSelect) {
+                pageSelect.value = 'product.html';
+            }
+            
+            if (pageEditor) {
+                pageEditor.scrollIntoView({ behavior: 'smooth' });
+            }
+            
+            const saveBtn = document.getElementById('save-page-btn');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
+            }
+            
+            const productUrl = `/product.html?id=${productId}`;
+            fetch(productUrl)
+                .then(r => {
+                    if (!r.ok) throw new Error('Could not load product page');
+                    return r.text();
+                })
+                .then(html => {
+                    const doc = iframe.contentDocument || iframe.contentWindow.document;
+                    doc.open();
+                    doc.write(html);
+                    doc.close();
+                    
+                    const initEditor = () => {
+                        makePageEditable(doc);
+                        if (saveBtn) {
+                            saveBtn.disabled = false;
+                            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Page';
+                        }
+                    };
+                    
+                    iframe.onload = initEditor;
+                    setTimeout(initEditor, 500);
+                })
+                .catch(err => {
+                    alert('Error loading page: ' + err.message);
+                    if (saveBtn) {
+                        saveBtn.disabled = true;
+                        saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Page';
+                    }
+                });
         }
 
         // Load product details into Form editor
@@ -1673,7 +1726,12 @@
             saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
             
             try {
-                const res = await fetch('/' + page);
+                let fetchUrl = '/' + page;
+                if (page === 'product.html') {
+                    const defaultId = (products && products.length > 0) ? products[0].id : 'p1';
+                    fetchUrl = `/product.html?id=${defaultId}`;
+                }
+                const res = await fetch(fetchUrl);
                 if (!res.ok) throw new Error('Could not load page ' + page);
                 const htmlContent = await res.text();
                 
@@ -1806,6 +1864,26 @@
                 const featuredContainer = clone.querySelector('#featured-products-container');
                 if (featuredContainer) {
                     featuredContainer.innerHTML = '\n                    <!-- Products will be injected here -->\n                ';
+                }
+                
+                if (page === 'product.html') {
+                    const pName = clone.querySelector('#product-name');
+                    if (pName) pName.textContent = 'Product Name';
+                    
+                    const pPrice = clone.querySelector('#product-price');
+                    if (pPrice) pPrice.textContent = '₹0';
+                    
+                    const pDesc = clone.querySelector('#product-description');
+                    if (pDesc) pDesc.textContent = 'Product details description will be loaded here.';
+                    
+                    const pBrand = clone.querySelector('#product-brand');
+                    if (pBrand) pBrand.textContent = 'Madamcutie Luxury';
+                    
+                    const pCat = clone.querySelector('#product-category');
+                    if (pCat) pCat.textContent = 'Collections';
+                    
+                    const pImg = clone.querySelector('#main-image');
+                    if (pImg) pImg.src = '';
                 }
                 
                 const outputHtml = '<!DOCTYPE html>\n' + clone.outerHTML;

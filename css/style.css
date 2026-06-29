@@ -440,3 +440,31 @@ h4 { font-size: clamp(14px, 2vw, 20px); font-family: var(--font-heading); font-w
         justify-content: center;
     }
 }
+
+/* ==========================================================================
+   SIZE SELECTOR BUTTONS
+   ========================================================================== */
+.size-btn {
+    background: #fff;
+    color: var(--color-primary);
+    border: 1px solid var(--color-border);
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+}
+.size-btn:hover {
+    border-color: var(--color-primary);
+}
+.size-btn.active {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+}
+.size-btn[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #f9f9f9;
+}

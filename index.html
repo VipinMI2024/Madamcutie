@@ -583,7 +583,7 @@
 
         // Load Featured Products
         function loadFeaturedProducts() {
-            const container = document.getElementById('featured-products-container');
+            const container = document.getElementById('madam-grid') || document.getElementById('featured-products-container');
             if (!container) return;
 
             // Get featured products from database (first 4 or products with featured flag)

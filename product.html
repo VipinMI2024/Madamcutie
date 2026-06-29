@@ -87,9 +87,9 @@
                         <h4 style="text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; margin-bottom: 15px; font-weight: 700;">Select Size</h4>
                         <div class="size-selector d-flex flex-wrap" style="gap: 10px;">
                             <button class="size-btn active">Free Size</button>
-                            <button class="size-btn" disabled="">S</button>
-                            <button class="size-btn" disabled="">M</button>
-                            <button class="size-btn" disabled="">L</button>
+                            <button class="size-btn">S</button>
+                            <button class="size-btn">M</button>
+                            <button class="size-btn">L</button>
                         </div>
                     </div>
 
@@ -190,10 +190,21 @@
                     }
                 }
                 
+                // Size selector toggle
+                const sizeBtns = document.querySelectorAll('.size-btn');
+                let selectedSize = 'Free Size';
+                sizeBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        sizeBtns.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        selectedSize = btn.textContent.trim();
+                    });
+                });
+                
                 const addBtn = document.getElementById('add-to-cart');
                 if (addBtn) {
                     addBtn.addEventListener('click', () => {
-                        addToCart(product.id, product.name, product.price, product.image);
+                        addToCart(product.id, product.name, product.price, product.image, selectedSize);
                         addBtn.textContent = 'Added to Bag!';
                         addBtn.style.background = '#000';
                         setTimeout(() => {

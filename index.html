@@ -601,7 +601,10 @@
                 return `
                     <div class="product-card" id="card-${p.id}">
                         <div class="product-image-wrapper">
-                            ${p.badge ? `<span class="product-badge" style="text-transform: uppercase;">${p.badge}</span>` : (p.featured ? '<span class="product-badge">BEST SELLER</span>' : '')}
+                            <div style="position: absolute; top: 15px; left: 15px; z-index: 5; display: flex; flex-direction: column; gap: 5px; align-items: flex-start;">
+                                ${p.sale ? '<span class="product-badge" style="position: static; background: #ff007f;">SALE</span>' : ''}
+                                ${p.bestseller ? '<span class="product-badge" style="position: static; background: #d4af37;">BEST SELLER</span>' : ''}
+                            </div>
                             <a href="product.html?id=${p.id}">
                                 <img src="${p.image}" alt="${p.name}" class="product-image" loading="lazy">
                                 <img src="${altImage}" alt="${p.name} alternate view" class="product-image-alt" loading="lazy">
@@ -615,7 +618,10 @@
                                 <span>★★★★★</span>
                                 <span class="product-rating-count">(${p.reviews})</span>
                             </div>
-                            <span class="product-price">₹${p.price}</span>
+                            <span class="product-price">
+                                ₹${p.price}
+                                ${p.sale && p.original_price ? `<span style="text-decoration: line-through; color: #888; font-size: 0.85em; font-weight: normal; margin-left: 8px;">₹${p.original_price}</span>` : ''}
+                            </span>
                         </div>
                     </div>
                 `;

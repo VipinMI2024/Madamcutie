@@ -85,7 +85,7 @@
                         </div>
                     </div>
 
-                    <button class="btn btn-primary" style="width: 100%; padding: 18px; font-size: 1rem; letter-spacing: 1px;" onclick="window.location.href='https://wa.me/919911852113?text=I would like to order items from my cart'">PROCEED TO CHECKOUT</button>
+                    <button class="btn btn-primary" style="width: 100%; padding: 18px; font-size: 1rem; letter-spacing: 1px;" onclick="checkoutWhatsApp()">PROCEED TO CHECKOUT</button>
                     
                     <div style="margin-top: 25px; text-align: center;">
                         <img src="https://help.zazzle.com/hc/article_attachments/360010513393/Logos-01.png" alt="Payment Methods" style="max-width: 100%; height: auto; opacity: 0.7;">
@@ -94,7 +94,7 @@
             </div>
         </div>
     </section>
-
+ 
     <!-- Footer -->
     <footer class="footer" style="background: var(--color-primary); color: white; padding: 80px 0 30px;">
         <div class="container">
@@ -117,7 +117,7 @@
             const totalEl = document.getElementById('total');
 
             function renderCart() {
-                const cart = JSON.parse(localStorage.getItem('madamCart')) || [];
+                const cart = getCart(); // From cart.js
                 
                 if (cart.length === 0) {
                     cartContent.style.display = 'none';
@@ -128,38 +128,56 @@
                 cartContent.style.display = 'grid';
                 cartEmpty.style.display = 'none';
 
-                let subtotal = 0;
                 cartList.innerHTML = cart.map((item, index) => {
-                    subtotal += item.price;
                     return `
                         <div class="cart-item" style="display: flex; gap: 20px; padding: 20px; background: #fff; border: 1px solid #eee; border-radius: 4px; align-items: center; flex-wrap: wrap;">
                             <div style="width: 100px; height: 130px; background: #f8f6f0; border-radius: 4px; overflow: hidden; flex-shrink: 0;">
-                                <img src="${item.img}" alt="${item.title}" style="width: 100%; height: 100%; object-fit: cover;">
+                                <img src="${item.image}" alt="${item.name}" style="width: 100%; height: 100%; object-fit: cover;">
                             </div>
                             <div style="flex: 1; min-width: 200px;">
-                                <h4 style="font-family: var(--font-heading); font-size: 1.2rem; margin-bottom: 5px;">${item.title}</h4>
-                                <p style="color: #888; font-size: 0.9rem; margin-bottom: 10px;">Size: Free Size</p>
+                                <h4 style="font-family: var(--font-heading); font-size: 1.2rem; margin-bottom: 5px;">${item.name}</h4>
+                                <p style="color: #888; font-size: 0.9rem; margin-bottom: 10px;">Size: ${item.size || 'Free Size'}</p>
                                 <div class="d-flex align-center justify-between" style="flex-wrap: wrap; gap: 15px;">
-                                    <span style="font-weight: 600; font-size: 1.1rem;">₹${item.price}</span>
-                                    <button onclick="removeFromCart(${index})" style="background: none; border: none; color: #ff007f; cursor: pointer; font-size: 0.9rem; font-weight: 600; text-decoration: underline;">Remove</button>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <button onclick="changeQty('${item.id}', '${item.size}', '${item.color}', ${item.quantity - 1})" style="width: 26px; height: 26px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-weight: bold;">-</button>
+                                        <span style="font-size: 1rem; font-weight: 600; min-width: 20px; text-align: center;">${item.quantity}</span>
+                                        <button onclick="changeQty('${item.id}', '${item.size}', '${item.color}', ${item.quantity + 1})" style="width: 26px; height: 26px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-weight: bold;">+</button>
+                                    </div>
+                                    <span style="font-weight: 600; font-size: 1.1rem;">₹${item.price * item.quantity}</span>
+                                    <button onclick="removeItem('${item.id}', '${item.size}', '${item.color}')" style="background: none; border: none; color: #ff007f; cursor: pointer; font-size: 0.9rem; font-weight: 600; text-decoration: underline;">Remove</button>
                                 </div>
                             </div>
                         </div>
                     `;
                 }).join('');
 
-                subtotalEl.textContent = `₹${subtotal}`;
-                totalEl.textContent = `₹${subtotal}`;
+                const total = getCartTotal();
+                subtotalEl.textContent = `₹${total}`;
+                totalEl.textContent = `₹${total}`;
             }
 
-            window.removeFromCart = (index) => {
-                let cart = JSON.parse(localStorage.getItem('madamCart')) || [];
-                cart.splice(index, 1);
-                localStorage.setItem('madamCart', JSON.stringify(cart));
+            window.changeQty = (id, size, color, qty) => {
+                updateCartQty(id, size, color, qty);
                 renderCart();
-                // Update global count
-                const countEl = document.querySelector('.cart-count');
-                if (countEl) countEl.textContent = cart.length;
+            };
+
+            window.removeItem = (id, size, color) => {
+                removeFromCart(id, size, color);
+                renderCart();
+            };
+
+            window.checkoutWhatsApp = () => {
+                const cart = getCart();
+                if (cart.length === 0) return;
+                
+                let text = "Hello Madamcutie, I would like to place an order for the following items:\n\n";
+                cart.forEach((item, index) => {
+                    text += `${index + 1}. *${item.name}*\n   Size: ${item.size || 'Free Size'} | Color: ${item.color || 'Standard'}\n   Qty: ${item.quantity} x ₹${item.price} = ₹${item.price * item.quantity}\n`;
+                });
+                text += `\n*Grand Total: ₹${getCartTotal()}*\n\nPlease confirm my order and let me know the payment details. Thank you!`;
+                
+                const encodedText = encodeURIComponent(text);
+                window.location.href = `https://wa.me/919911852113?text=${encodedText}`;
             };
 
             renderCart();

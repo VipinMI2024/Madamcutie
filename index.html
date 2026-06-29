@@ -618,7 +618,7 @@
                                 <span>★★★★★</span>
                                 <span class="product-rating-count">(${p.reviews})</span>
                             </div>
-                            <span class="product-price">$${p.price.toFixed(2)}</span>
+                            <span class="product-price">₹${p.price}</span>
                         </div>
                     </div>
                 `;
@@ -827,21 +827,16 @@ function saveChanges() {
     
             <script id="custom-cart-logic">
             document.addEventListener('DOMContentLoaded', () => {
-                let cart = JSON.parse(localStorage.getItem('madamCart')) || [];
-                const cartCountEl = document.querySelector('.cart-count');
-                
-                function updateCartCount() {
-                    if(cartCountEl) cartCountEl.textContent = cart.length;
-                }
-                updateCartCount();
+                // Synchronize static cards with the official cart.js
+                const cart = getCart();
                 
                 // Set initial state for buttons based on cart
                 document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
                     const card = btn.closest('.madam-card');
                     if(card) {
                         const titleEl = card.querySelector('h3 a');
-                        const title = titleEl ? titleEl.textContent : 'Dress';
-                        const inCart = cart.some(item => item.title === title);
+                        const title = titleEl ? titleEl.textContent.trim() : 'Dress';
+                        const inCart = cart.some(item => item.name === title);
                         if(inCart) {
                             btn.textContent = 'ADDED';
                             btn.style.background = '#ff007f';
@@ -855,17 +850,23 @@ function saveChanges() {
                         
                         const card = btn.closest('.madam-card');
                         const titleEl = card.querySelector('h3 a');
-                        const priceEl = card.querySelector('span[style*="font-weight: 600"]');
+                        const priceEl = card.querySelector('span[style*="font-weight: 600"]') || card.querySelector('span[style*="font-weight:600"]');
                         const imgEl = card.querySelector('img');
                         
-                        const item = {
-                            title: titleEl ? titleEl.textContent : 'Dress',
-                            price: priceEl ? parseInt(priceEl.textContent.replace(/\D/g,'')) : 0,
-                            img: imgEl ? imgEl.src : ''
-                        };
-                        cart.push(item);
-                        localStorage.setItem('madamCart', JSON.stringify(cart));
-                        updateCartCount();
+                        const title = titleEl ? titleEl.textContent.trim() : 'Dress';
+                        const price = priceEl ? parseInt(priceEl.textContent.replace(/\D/g,'')) : 0;
+                        const img = imgEl ? imgEl.getAttribute('src') : '';
+                        
+                        // Extract product ID from the link
+                        const linkEl = card.querySelector('a[href*="product.html"]');
+                        let productId = 'p1';
+                        if (linkEl) {
+                            const href = linkEl.getAttribute('href') || '';
+                            const match = href.match(/id=([^&]+)/);
+                            if (match) productId = match[1];
+                        }
+                        
+                        addToCart(productId, title, price, img);
                         
                         btn.textContent = 'ADDED';
                         btn.style.background = '#ff007f';
@@ -876,7 +877,7 @@ function saveChanges() {
                 document.querySelectorAll('.love-icon svg').forEach(svg => {
                     svg.addEventListener('click', (e) => {
                         e.preventDefault();
-                        if(svg.getAttribute('fill') === 'none') {
+                        if(svg.getAttribute('fill') === 'none' || !svg.getAttribute('fill')) {
                             svg.setAttribute('fill', '#ff007f');
                         } else {
                             svg.setAttribute('fill', 'none');

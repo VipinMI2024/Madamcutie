@@ -968,6 +968,21 @@
                                         </div>
                                     </div>
                                     
+                                    <div class="form-group">
+                                        <label for="prod-badge">Product Badge / Tag (optional)</label>
+                                        <select id="prod-badge" class="form-control" onchange="onBadgeChange()">
+                                            <option value="">No Badge / Tag</option>
+                                            <option value="SALE">SALE</option>
+                                            <option value="Best Seller">Best Seller</option>
+                                            <option value="New Arrival">New Arrival</option>
+                                            <option value="Trending">Trending</option>
+                                            <option value="Custom">Custom (Type below)</option>
+                                        </select>
+                                        <div id="prod-badge-custom-container" style="display: none; margin-top: 8px;">
+                                            <input type="text" id="prod-badge-custom" class="form-control" placeholder="Type custom tag/badge name...">
+                                        </div>
+                                    </div>
+                                    
                                     <div class="checkbox-row">
                                         <label class="checkbox-item">
                                             <input type="checkbox" id="prod-in-stock" checked>
@@ -1151,7 +1166,11 @@
                     </td>
                     <td>
                         <div class="product-name">${escapeHtml(p.name)}</div>
-                        <div class="product-id">ID: ${p.id} ${!p.in_stock ? '<span style="color:var(--color-danger); font-size:0.7rem; font-weight:bold; margin-left:5px;">[OUT OF STOCK]</span>' : ''}</div>
+                        <div class="product-id">
+                            ID: ${p.id} 
+                            ${!p.in_stock ? '<span style="color:var(--color-danger); font-size:0.7rem; font-weight:bold; margin-left:5px;">[OUT OF STOCK]</span>' : ''}
+                            ${p.badge ? `<span style="background:var(--color-accent); color:#000; padding:2px 6px; border-radius:3px; font-size:0.65rem; font-weight:bold; margin-left:8px; display:inline-block; text-transform:uppercase;">${escapeHtml(p.badge)}</span>` : ''}
+                        </div>
                     </td>
                     <td>
                         <span class="category-badge">${escapeHtml(p.category)}</span>
@@ -1329,6 +1348,24 @@
             document.getElementById('prod-in-stock').checked = p.in_stock !== false;
             document.getElementById('prod-featured').checked = p.featured === true;
             
+            // Set badge / tag value or custom if not found
+            const badgeSelect = document.getElementById('prod-badge');
+            const badgeCustomContainer = document.getElementById('prod-badge-custom-container');
+            const badgeCustomInput = document.getElementById('prod-badge-custom');
+            
+            if (badgeSelect && badgeCustomContainer && badgeCustomInput) {
+                const standardBadges = ['', 'SALE', 'Best Seller', 'New Arrival', 'Trending'];
+                if (standardBadges.includes(p.badge || '')) {
+                    badgeSelect.value = p.badge || '';
+                    badgeCustomContainer.style.display = 'none';
+                    badgeCustomInput.value = '';
+                } else {
+                    badgeSelect.value = 'Custom';
+                    badgeCustomContainer.style.display = 'block';
+                    badgeCustomInput.value = p.badge || '';
+                }
+            }
+            
             // Set category dropdown value or custom if not found
             const categorySelect = document.getElementById('prod-category');
             const customContainer = document.getElementById('prod-category-custom-container');
@@ -1378,6 +1415,14 @@
             document.getElementById('prod-category-custom-container').style.display = 'none';
             document.getElementById('prod-category-custom').value = '';
             document.getElementById('prod-category-custom').required = false;
+            
+            const badgeSelect = document.getElementById('prod-badge');
+            if (badgeSelect) {
+                badgeSelect.value = '';
+                document.getElementById('prod-badge-custom-container').style.display = 'none';
+                document.getElementById('prod-badge-custom').value = '';
+                document.getElementById('prod-badge-custom').required = false;
+            }
             
             document.getElementById('submit-btn-text').textContent = 'Add Product';
             document.getElementById('cancel-btn').style.display = 'none';
@@ -1466,6 +1511,11 @@
                 category = document.getElementById('prod-category-custom').value.trim();
             }
             
+            let badge = document.getElementById('prod-badge').value;
+            if (badge === 'Custom') {
+                badge = document.getElementById('prod-badge-custom').value.trim();
+            }
+            
             if (!name || isNaN(price) || !category || !imagePath) {
                 alert('Please fill out all required fields.');
                 submitBtn.disabled = false;
@@ -1484,6 +1534,7 @@
                     p.image = imagePath;
                     p.in_stock = in_stock;
                     p.featured = featured;
+                    p.badge = badge;
                     showToast(`Product ${editingProductId} updated locally!`);
                 }
             } else {
@@ -1499,7 +1550,8 @@
                     description,
                     image: imagePath,
                     in_stock,
-                    featured
+                    featured,
+                    badge
                 };
                 products.push(newProduct);
                 showToast(`New product ${newId} created locally!`);
@@ -1672,6 +1724,23 @@
             const customInput = document.getElementById('prod-category-custom');
             
             if (select.value === '__custom__') {
+                customContainer.style.display = 'block';
+                customInput.required = true;
+                customInput.focus();
+            } else {
+                customContainer.style.display = 'none';
+                customInput.required = false;
+                customInput.value = '';
+            }
+        }
+
+        // Handle Custom Badge Toggle
+        function onBadgeChange() {
+            const select = document.getElementById('prod-badge');
+            const customContainer = document.getElementById('prod-badge-custom-container');
+            const customInput = document.getElementById('prod-badge-custom');
+            
+            if (select.value === 'Custom') {
                 customContainer.style.display = 'block';
                 customInput.required = true;
                 customInput.focus();

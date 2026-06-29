@@ -604,7 +604,7 @@
                 return `
                     <div class="product-card" id="card-${p.id}">
                         <div class="product-image-wrapper">
-                            ${p.featured ? '<span class="product-badge">BEST SELLER</span>' : ''}
+                            ${p.badge ? `<span class="product-badge" style="text-transform: uppercase;">${p.badge}</span>` : (p.featured ? '<span class="product-badge">BEST SELLER</span>' : '')}
                             <a href="product.html?id=${p.id}">
                                 <img src="${p.image}" alt="${p.name}" class="product-image" loading="lazy">
                                 <img src="${altImage}" alt="${p.name} alternate view" class="product-image-alt" loading="lazy">

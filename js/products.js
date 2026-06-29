@@ -99,7 +99,7 @@ const PRODUCTS = [
         "id": "p9",
         "name": "Tailored Slim-Fit Trousers 408",
         "category": "Bottoms",
-        "price": 1049,
+        "price": 10,
         "rating": 4.4,
         "reviews": 68,
         "description": "Perfectly tailored trousers with side pockets and a high rise. Made of high-quality stretchable fabric for maximum comfort.",
